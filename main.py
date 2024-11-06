@@ -1,6 +1,8 @@
 from tabulate import tabulate
 import pandas as pd
 
+MAX_INT = 10 ** 9
+
 
 class Table:
     def __init__(self, supply_vector, coefficient_matrix, demand_vector):
@@ -16,7 +18,8 @@ class Table:
         representation_dict["Source"].append("Demand")
         for j in range(len(self.demand_vector)):
             representation_dict[f"B{j + 1}"] = [
-                self.coefficient_matrix[k][j]
+                self.coefficient_matrix[k][j] if self.coefficient_matrix[k][
+                                                     j] != MAX_INT else "M"
                 for k in range(len(self.supply_vector))
             ]
             representation_dict[f"B{j + 1}"].append(self.demand_vector[j])
@@ -73,9 +76,33 @@ class VogelApproximationMethod:
 class RussellApproximationMethod:
     def __init__(self, table):
         self.table = table
+        self.symbols_list = [f"v_{i + 1}"
+                             for i in range(len(self.table.demand_vector))]
 
-    def solve(self):
-        pass
+    def iterate(self):
+        delta_table = [[0 for _ in range(len(self.table.supply_vector))]
+                       for _ in range(len(self.table.demand_vector))]
+        for i in range(len(self.table.demand_vector)):
+            for j in range(len(self.table.supply_vector)):
+                cost = self.table.coefficient_matrix[j][i]
+                row = [self.table.coefficient_matrix[j][k] for k in
+                       range(len(self.table.demand_vector))]
+                column = [self.table.coefficient_matrix[k][i] for k in
+                          range(len(self.table.supply_vector))]
+                max_row = max(row)
+                max_column = max(column)
+                delta_table[i][j] = cost - max_row - max_column
+
+        minimal_coordinates = (0, 0)
+        minimum = delta_table[0][0]
+        for i in range(1, len(delta_table)):
+            for j in range(len(delta_table[i])):
+                if delta_table[i][j] < minimum:
+                    minimum = delta_table[i][j]
+                    minimal_coordinates = (i, j)
+
+        print(f"Minimal coordinates: {minimal_coordinates} with value "
+              f"{minimum}")
 
 
 def form_table():
@@ -92,8 +119,11 @@ def form_table():
 def main():
     table = form_table()
     print(table)
-    print("Method: North West Corner Method")
-    NorthWestCornerMethod(table).solve()
+    # print("Method: North West Corner Method")
+    # NorthWestCornerMethod(table).solve()
+    print("Method: Russell's Approximation Method")
+    print("Iteration #1:")
+    RussellApproximationMethod(table).iterate()
     print(table)
 
 
