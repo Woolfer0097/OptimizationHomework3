@@ -76,8 +76,6 @@ class VogelApproximationMethod:
 class RussellApproximationMethod:
     def __init__(self, table):
         self.table = table
-        self.symbols_list = [f"v_{i + 1}"
-                             for i in range(len(self.table.demand_vector))]
 
     def iterate(self):
         delta_table = [[0 for _ in range(len(self.table.supply_vector))]
@@ -103,6 +101,9 @@ class RussellApproximationMethod:
 
         print(f"Minimal coordinates: {minimal_coordinates} with value "
               f"{minimum}")
+
+    def solve(self):
+        pass
 
 
 def form_table():
