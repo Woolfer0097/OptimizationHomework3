@@ -20,9 +20,15 @@ class Table:
                 for k in range(len(self.supply_vector))
             ]
             representation_dict[f"B{j + 1}"].append(self.demand_vector[j])
-        representation_dict["Supply"] = self.supply_vector
-        representation_dict["Supply"].append(sum(self.supply_vector))
+        supply_list = []
+        supply_list.extend(self.supply_vector)
+        supply_list.append(sum(self.supply_vector))
+        representation_dict["Supply"] = supply_list
         return pd.DataFrame(representation_dict)
+
+    def __str__(self):
+        return tabulate(self.get_table_representation(), headers="keys",
+                        tablefmt="fancy_grid")
 
 
 class NorthWestCornerMethod:
@@ -38,7 +44,7 @@ class NorthWestCornerMethod:
                 current_table_element = self.table.coefficient_matrix[y][x]
 
                 if current_demand_element == 0 or current_supply_element == 0:
-                    self.table.coefficient_matrix[y][x] = "-"
+                    # self.table.coefficient_matrix[y][x] = "-"
                     continue
 
                 minimal_demand_supply = min(current_demand_element,
@@ -85,9 +91,10 @@ def form_table():
 
 def main():
     table = form_table()
+    print(table)
+    print("Method: North West Corner Method")
     NorthWestCornerMethod(table).solve()
-    print(tabulate(table.get_table_representation(), headers="keys",
-                   tablefmt="fancy_grid"))
+    print(table)
 
 
 class BalanceError(Exception):
