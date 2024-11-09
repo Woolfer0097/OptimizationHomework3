@@ -63,7 +63,7 @@ class NorthWestCornerMethod:
             raise BalanceError
         print(f"Total distribution cost: {total_distribution_cost}")
         print(
-            f"Vector x0: {', '.join(map(str, self.table.coefficient_matrix))}")
+            f"Vector x0: ({', '.join(map(str, self.table.coefficient_matrix))})")
 
 
 class VogelApproximationMethod:
@@ -142,77 +142,82 @@ class VogelApproximationMethod:
         )
         print(f"Total distribution cost: {total_cost}")
 
-        print("Final cost vector: ")
-        print(', '.join(map(str, [table_cost[i] for i in range(3)])))
+        print("Vector x0: (", end="")
+        print(', '.join(map(str, [table_cost[i] for i in range(3)]))+")")
 
 
 class RussellApproximationMethod:
     def __init__(self, table):
         self.table = table
         self.total_distribution_cost = 0
+        self.x0 = copy.deepcopy(self.table.coefficient_matrix)
+
+        for i in range(len(self.x0)):
+            for j in range(len(self.x0[i])):
+                self.x0[i][j]=0
+
+    def delete_after_min_supply(self, index):
+        for i in self.table.coefficient_matrix:
+            i.pop(index)
+        self.table.demand_vector.pop(index)
+    def delete_after_min_demand(self, index):
+        self.table.coefficient_matrix.pop(index)
+        self.table.supply_vector.pop(index)
 
     def iterate(self):
-        for i in range(10):
+        while sum(self.table.demand_vector) >0 and  sum(self.table.supply_vector)>0:
             delta_table = [[0 for _ in range(len(self.table.supply_vector))]
                            for _ in range(len(self.table.demand_vector))]
 
-            # print supply vector
-            print(self.table.supply_vector)
 
-            # print demand vector
-            print(self.table.demand_vector)
-
-            # print coefficient matrix
-            for row in self.table.coefficient_matrix:
-                print(row)
-
-            # calculate delta table
             for i in range(len(self.table.demand_vector)):
                 for j in range(len(self.table.supply_vector)):
-                    cost = self.table.coefficient_matrix[j][i]
-                    row = [self.table.coefficient_matrix[j][k] for k in
+                    cost = self.table.coefficient_matrix[j][i][0]
+                    row = [self.table.coefficient_matrix[j][k][0] for k in
                            range(len(self.table.demand_vector))]
-                    column = [self.table.coefficient_matrix[k][i] for k in
+                    column = [self.table.coefficient_matrix[k][i][0] for k in
                               range(len(self.table.supply_vector))]
                     max_row = max(row)
                     max_column = max(column)
-                    print(f"max row: {max_row}\nmax column: {max_column}")
                     delta_table[i][j] = cost - max_row - max_column
 
             minimal_coordinates = (0, 0)
-            minimum = delta_table[0][0]
-            for i in range(1, len(delta_table)):
+            minimum = 10e9
+            for i in range(len(delta_table)):
                 for j in range(len(delta_table[i])):
                     if delta_table[i][j] < minimum:
                         minimum = delta_table[i][j]
                         minimal_coordinates = (i, j)
 
-            # print delta table
-            for row in delta_table:
-                print(row)
 
-            print(f"Minimal coordinates: {minimal_coordinates} with value "
-                  f"{minimum}")
             x, y = minimal_coordinates
             current_demand_element = self.table.demand_vector[x]
             current_supply_element = self.table.supply_vector[y]
-            current_table_element = self.table.coefficient_matrix[y][x]
+            current_table_element = self.table.coefficient_matrix[y][x][0]
 
             if current_demand_element == 0 or current_supply_element == 0:
-                self.table.coefficient_matrix[y][x] = 0
+                self.table.coefficient_matrix[y][x][0] = 0
                 continue
 
-            if current_demand_element == 0 and current_supply_element == 0:
-                return
+
 
             minimal_demand_supply = min(current_demand_element,
                                         current_supply_element)
+
             self.total_distribution_cost += (minimal_demand_supply *
                                              current_table_element)
+            new_x = self.table.coefficient_matrix[y][x][1]
+            new_y = self.table.coefficient_matrix[y][x][2]
+            self.x0[new_x][new_y] = minimal_demand_supply
 
-            self.table.coefficient_matrix[y][x] = minimal_demand_supply
-            self.table.demand_vector[x] -= minimal_demand_supply
             self.table.supply_vector[y] -= minimal_demand_supply
+            self.table.demand_vector[x] -= minimal_demand_supply
+
+            if current_supply_element<current_demand_element:
+                self.delete_after_min_demand(y)
+            else:
+                self.delete_after_min_supply(x)
+
 
             if sum(self.table.demand_vector) != sum(self.table.supply_vector):
                 raise BalanceError
@@ -221,7 +226,7 @@ class RussellApproximationMethod:
         self.iterate()
         print(f"Total distribution cost: {self.total_distribution_cost}")
         print(
-            f"Vector x0: {', '.join(map(str, self.table.coefficient_matrix))}")
+            f"Vector x0: ({', '.join(map(str, self.x0))})")
 
 
 def form_table():
@@ -249,9 +254,12 @@ def main():
     VogelApproximationMethod(vogel_table).solve()
 
     russell_table = copy.deepcopy(table)
+    for i in range(len(russell_table.coefficient_matrix)):
+        for j in range(len(russell_table.coefficient_matrix[i])):
+            russell_table.coefficient_matrix[i][j] = [russell_table.coefficient_matrix[i][j],i,j]
     print(
-        "\n\n================\nMethod: Russell's "
-        "Approximation Method\n================")
+       "\n\n================\nMethod: Russell's "
+       "Approximation Method\n================")
     RussellApproximationMethod(russell_table).solve()
 
 
